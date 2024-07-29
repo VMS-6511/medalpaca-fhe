@@ -1,5 +1,6 @@
 import os
 import sys
+sys.path.append(".")
 from typing import Tuple, Union
 
 import fire
@@ -10,23 +11,24 @@ from peft import (
     LoraConfig,
     get_peft_model,
     get_peft_model_state_dict,
-    prepare_model_for_int8_training,
+    prepare_model_for_kbit_training,
 )
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     DataCollatorForSeq2Seq,
-    LlamaForCausalLM,
+    # LlamaForCausalLM,
     LlamaTokenizer,
     Trainer,
     TrainingArguments,
 )
 
+from modeling_llama import LlamaForCausalLM
 
 def main(
     model: str, # e.g. "decapoda-research/llama-7b-hf"
     val_set_size: Union[int, float] = 0.1,
-    prompt_template: str = "prompts/medalpaca.json",
+    prompt_template: str = "/data/healthy-ml/scratch/vinithms/projects/medalpaca-fhe/medalpaca/prompt_templates/medalpaca.json",
     model_max_length: int = 256,  # should not exceed 2048, as LLaMA is trained with this
     train_on_inputs: bool = True,  # if False, masks out inputs in loss
     data_path: str = "medical_meadow_small.json",
@@ -176,7 +178,7 @@ def main(
     )
 
     if train_in_8bit:
-        model = prepare_model_for_int8_training(model)
+        model = prepare_model_for_kbit_training(model)
 
     if use_lora:
         lora_config = LoraConfig(

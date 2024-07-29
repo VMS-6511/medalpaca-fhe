@@ -15,7 +15,7 @@ source /home/user/miniconda3/etc/profile.d/conda.sh
 conda activate medalpaca
 
 # recommended to manually set the hf cache dir, as the files are huge
-export HF_HOME="/path/to/your/hfcache"
+export HF_HOME="/data/scratch-oc40/vinithms"
 
 # feel free to adapt the below command, to run the training
 # in 8bit with LoRA, fp16 with LoRA or bf16 and fsdp
