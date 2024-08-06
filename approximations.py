@@ -105,7 +105,6 @@ def softmax(input_tensor, n): # not designed for -inf
 
 def softmax_approx(input, dim):
     slices = torch.unbind(input, dim=dim)
-    print(slices[0].ravel().shape)
     processed_slices = [softmax(s.ravel(), s.ravel().shape[0]).reshape(slices[0].shape) for s in slices]
     output_tensor = torch.stack(processed_slices, dim=dim)
     # print(output_tensor.shape)
@@ -136,13 +135,16 @@ class SoftmaxApprox(nn.Module):
 def scaled_dot_product_attention_approx(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
     L, S = query.size(-2), key.size(-2)
     scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
-    attn_bias = torch.zeros(L, S, dtype=query.dtype)
+    attn_bias = torch.zeros(attn_mask.shape, dtype=query.dtype).to("cuda")
     if is_causal:
         assert attn_mask is None
         temp_mask = torch.ones(L, S, dtype=torch.bool).tril(diagonal=0)
         attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
         attn_bias.to(query.dtype)
 
+    # print("hello")
+    # print(attn_mask.shape)
+    # print(attn_bias.shape)
     if attn_mask is not None:
         if attn_mask.dtype == torch.bool:
             attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
@@ -152,12 +154,10 @@ def scaled_dot_product_attention_approx(query, key, value, attn_mask=None, dropo
     attn_weight += attn_bias
     # print(attn_weight.shape)
     attn_weight = softmax_approx(attn_weight, dim=-1)
-    return
-    print(attn_weight.shape)
     attn_weight = F.dropout(attn_weight, dropout_p)
     return attn_weight @ value
 
-def example():
+def example_spda():
     x = torch.tensor([0.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, -8.0]+[0 for _ in range(32-11)])
     print(x.shape)
     query = torch.rand(32, 8, 128, 64, dtype=torch.float16)
@@ -168,4 +168,12 @@ def example():
     # print("Expected:\n",F.scaled_dot_product_attention(query, key, value))    
     # assert torch.allclose(result, F.scaled_dot_product_attention(query, key, value), atol=1e-3)
 
+def example():
+    x = torch.tensor([0.0, -1.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, -8.0]+[0 for _ in range(32-11)])
+    result = softmax(x, x.shape[0])
+    print("Approximation:\n",result)
+    print("Expected:\n",nn.functional.softmax(x, dim=-1))    
+    assert torch.allclose(result, nn.functional.softmax(x, dim=-1), atol=1e-3) 
+
 example()
+# example_spda()
